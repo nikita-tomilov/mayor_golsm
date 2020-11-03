@@ -2,11 +2,11 @@
 
 \subsection{Test methodology}
 
-To compare the LSM solution with SQLite, it was developed a simple storage system that consists of two tables. The first table is called Measurement and it is used to store the measurements; each measurement is represented by its key, timestamp and value, while the key is the primary ID of MeasurementMeta entity, that is stored in the second table. This entity stores the tag name of the measurement; therefore it is possible to perform search operations filtering by numeric column instead of a text column. The Measurement table has indexes on both the key and the timestamp columns.
+To compare the LSM solution with SQLite, a simple storage system was developed. It has a database that consists of two tables. The first table is called Measurement and it is used to store the measurements; each measurement is represented by its key, timestamp and value, while the key is the primary ID of MeasurementMeta entity, that is stored in the second table. This entity stores the tag name of the measurement; therefore it is possible to perform search operations filtering by numeric column instead of a text column. The Measurement table has indexes on both the key and the timestamp columns.
 
-For the following benchmarks, it was used a sample setup of having 10 sensors that emit data at a sampling frequency of 1Hz. For the reading benchmarks, the data for those 10 tags were generated for the time range of three hours; thus, the SQLite database had 108000 entries in total, 10800 points per each tag, and for the LSM library there were 10 files per each tag, having 10800 points in each one as well. For the writing benchmarks, the data for those 10 tags are generated for various time ranges and then stored in both storage engines.
+For the following benchmarks, a sample setup was used. This setup has 10 sensors that emit data at a sampling frequency of 1Hz. For the reading benchmarks, the data for those 10 tags were generated for the time range of three hours. Therefore, the SQLite database had 108000 entries in total, 10800 points per each tag. The LSM library has 108000 entries as well, splitted across 10 files per each tag, having 10800 points in each one. For the writing benchmarks, the data for those 10 tags is generated for various time ranges and then stored in both storage engines.
 
-In order to benchmark both storage engines, it was used a standard Go benchmarking mechanism. It runs the target code multiple times until the benchmark function lasts long enough to be measured reliably~\cite{go_benchmark}. It produces the result that is measured in ns/op, nanoseconds per iteration; for the following benchmarks, iteration is a single storage read or storage write call.
+In order to benchmark both storage engines, a standard Go benchmarking mechanism was used. It runs the target code multiple times until the benchmark function lasts long enough to be measured reliably~\cite{go_benchmark}. It produces the result that is measured in ns/op, nanoseconds per iteration; for the following benchmarks, iteration is a single storage read or storage write call.
 
 All benchmarks were running on a PC with Intel Core i5-8400 running Ubuntu 18.04, the data files for both storages were stored on an NVMe SSD.
 
@@ -15,9 +15,9 @@ All benchmarks were running on a PC with Intel Core i5-8400 running Ubuntu 18.04
 This benchmark measures the read time for various time ranges, while the operation is performed across full three hours of measurements. The results of this benchmark are available in Figure~\ref{fig3}. As seen, the GoLSM is about twice as fast as SQLite engine on read requests. It is worth mentioning that the $C_0$ level of LSM tree is not playing a significant role in speeding up the data retrieval, since the time range is picked randomly from across all three hours of measurements while the $C_0$ level only contains the last two minutes of measurements.
 
 \begin{figure}[h!]
-\centering
-\input{figures/1-read-comparison}
-\caption{Reading from full range of data.} \label{fig3}
+	\centering
+	\input{figures/1-read-comparison}
+	\caption{Reading from full range of data.} \label{fig3}
 \end{figure}
 
 As seen, the LSM storage is up to 50 times faster than SQLite on a small request range (51251 ns/op for GoLSM and 2517353 ns/op for SQLite on 25s range) and up to twice as fast on a big request range (12106688 ns/op and 24262132 ns/op on 2h15min range). This big difference may be caused by using an in-memory index over each SST file that performed better than indexing within the SQLite. An efficiency increase for the small request range may be caused by the fact that it is more likely for the small requested range to fit within the $C_0$ level of the LSM tree, so the slow retrieval from the SST is not launched.
@@ -27,20 +27,20 @@ As seen, the LSM storage is up to 50 times faster than SQLite on a small request
 This benchmark measures the read time for various time ranges, while the operation is performed across the latest three minutes of measurements. The results of this benchmark are shown in Figure~\ref{fig4}. Since the $C_0$ level of the LSM tree contains the last two minutes of measurements, it is more likely the request will fit the $C_0$ level without the need to request data from the $C_1$ level. Therefore, data retrieval is up to twice as fast as retrieving the data from across all three hours of measurements, as seen in Figure~\ref{fig5}. 
 
 \begin{figure}[!htb]
-   \begin{minipage}{0.48\textwidth}
-    \centering
-    \resizebox{\textwidth}{!}{%
-        \input{figures/2.1-read-latest}
-    }
-    \caption{Reading from full range of data.}\label{fig4}
-   \end{minipage}\hfill
-   \begin{minipage}{0.48\textwidth}
-    \centering
-    \resizebox{\textwidth}{!}{%
-        \input{figures/2.2-read-latest-lsmvslsm}
-    }
-     \caption{Difference in GoLSM speed on the latest data.}\label{fig5}
-   \end{minipage}
+	\begin{minipage}{0.48\textwidth}
+		\centering
+		\resizebox{\textwidth}{!}{%
+			\input{figures/2.1-read-latest}
+		}
+		\caption{Reading from full range of data.}\label{fig4}
+	\end{minipage}\hfill
+	\begin{minipage}{0.48\textwidth}
+		\centering
+		\resizebox{\textwidth}{!}{%
+			\input{figures/2.2-read-latest-lsmvslsm}
+		}
+		\caption{Difference in GoLSM speed on the latest data.}\label{fig5}
+	\end{minipage}
 \end{figure}
 
 If the data retrieval pattern is retrieving only the latest data, increasing the capacity of $C_0$ can drastically improve reading performance and reduce the reading load on the persistent disk storage.
@@ -50,22 +50,22 @@ If the data retrieval pattern is retrieving only the latest data, increasing the
 This benchmark measures the write time for various time ranges. While the data is linear the minimal timestamp of the next data batch to be written is always more than the maximum timestamp of the previously written batch. It means, for each SST within the GoLSM engine the data is only appended to the end of the SST file without the need to redo the sorting of the file. The results of this benchmark are available in Figure~\ref{fig6}.
 
 \begin{figure}[!htb]
-   \begin{minipage}{0.48\textwidth}
-    \centering
-    \resizebox{\textwidth}{!}{%
-        \input{figures/3.1-write-comparison-full}
-    }
-    \label{figure}{(a) Over big range}
-   \end{minipage}\hfill
-   \begin{minipage}{0.48\textwidth}
-    \centering
-    \resizebox{\textwidth}{!}{%
-        \input{figures/3.2-write-comparison-small}
-    }
-    \label{figure}{(b) Over small range}
-   \end{minipage}
-   
-    \caption{Writing linear data.}\label{fig6}
+	\begin{minipage}{0.48\textwidth}
+		\centering
+		\resizebox{\textwidth}{!}{%
+			\input{figures/3.1-write-comparison-full}
+		}
+		\label{figure}{(a) Over big range}
+	\end{minipage}\hfill
+	\begin{minipage}{0.48\textwidth}
+		\centering
+		\resizebox{\textwidth}{!}{%
+			\input{figures/3.2-write-comparison-small}
+		}
+		\label{figure}{(b) Over small range}
+	\end{minipage}
+	
+	\caption{Writing linear data.}\label{fig6}
 \end{figure}
 
 In Figure~\ref{fig6}, (a) it is clearly seen that GoLSM writes data twice as fast as SQLite over the big time range that is being written.  However, in Figure~\ref{fig6}, (b) for the small time range the GoLSM is actually slower. The reason for this is that for LSM was measured the time until the data is actually written to the commit log, and not directly to the SST files; and when the amount of entries in the commit log reaches a certain threshold, it has to be transferred to the SST, causing spikes in write time. However, for big time ranges being written this overhead is not important compared to generally slow batch inserts to SQLite. 
@@ -77,20 +77,20 @@ It is worth mentioning that for inserting to SQLite it is necessary to construct
 This benchmark measures the write time for various time ranges, while the data is random, there are no guarantees that all of the next batch timestamps are bigger than the timestamps of the previously written batch. So the batches could occur before or after one another in terms of their timestamps. It means each time when the data is transferred from the commit log file to SST files the engine has to resort the whole SST file, slowing down the writing process. The results of this benchmark are available in Figure~\ref{fig7}. The comparison of writing the data to LSM when the data is either linear or randomized is available in Figure~\ref{fig8}.
 
 \begin{figure}[!htb]
-   \begin{minipage}{0.48\textwidth}
-    \centering
-    \resizebox{\textwidth}{!}{%
-        \input{figures/3.3-writerandom}
-    }
-    \caption{Writing randomized data.}\label{fig7}
-   \end{minipage}\hfill
-   \begin{minipage}{0.48\textwidth}
-    \centering
-    \resizebox{\textwidth}{!}{%
-        \input{figures/3.4-writerandom-lsmvslsm}
-    }
-     \caption{Difference in GoLSM speed when writing linear and randomized data.}\label{fig8}
-   \end{minipage}
+	\begin{minipage}{0.48\textwidth}
+		\centering
+		\resizebox{\textwidth}{!}{%
+			\input{figures/3.3-writerandom}
+		}
+		\caption{Writing randomized data.}\label{fig7}
+	\end{minipage}\hfill
+	\begin{minipage}{0.48\textwidth}
+		\centering
+		\resizebox{\textwidth}{!}{%
+			\input{figures/3.4-writerandom-lsmvslsm}
+		}
+		\caption{Difference in GoLSM speed when writing linear and randomized data.}\label{fig8}
+	\end{minipage}
 \end{figure}
 
 As seen in Figure~\ref{fig7}, the overhead of resorting the SST files on every data write is so big that it outperforms the slow batch inserts to SQLite. The comparison of the data writes with this overhead to data writes without the overhead is in Figure~\ref{fig8}. When the timestamps of the data are always linearly increasing, shows that the inserts are almost up to three times slower on large time range writes (747870163 ns/op, or 747 ms, for writing 25 minutes of linear data, and 1942545058 ns/op, or 1942 ms, for writing 25 minutes of randomized data).
