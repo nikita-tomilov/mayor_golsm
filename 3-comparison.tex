@@ -1,30 +1,30 @@
-\section{Comparison against SQLite}
+\section{Сравнение с SQLite}
 
-\subsection{Test methodology}
+\subsection{Методология сравнения}
 
-To compare the LSM solution with SQLite, a simple storage system was developed. It has a database that consists of two tables. The first table is called Measurement and it is used to store the measurements. Each measurement is represented by its key, timestamp and value, while the key is the primary ID of MeasurementMeta entity, that is stored in the second table. This entity stores the tag name of the measurement; therefore it is possible to perform search operations filtering by numeric column instead of a text column. The Measurement table has indexes on both the key and the timestamp columns.
+Для сравнения LSM-решения с SQLite была разработана простая система хранения на основе SQLite. Она использует базу данных, состоящую из двух таблиц. Первая таблица называется Measurement и используется для хранения измерений. Каждое измерение представлено своим ключом, временной меткой и значением, а ключ - это первичный идентификатор объекта MeasurementMeta, который хранится во второй таблице. Этот объект хранит имя тега измерения; поэтому можно выполнять поисковые операции с фильтрацией по числовому столбцу вместо текстового столбца. В таблице измерений есть индексы как для ключевого столбца, так и для столбца временной метки.
 
-For the following benchmarks, a sample synthetic setup was used. This setup has 10 sensors that emit data at a sampling frequency of 1Hz. For the reading benchmarks, the data for those 10 tags were generated for the time range of three hours. Therefore, the SQLite database had 108000 entries, or points, in total, which means 10800 points per each tag. The LSM library has 108000 entries as well, splitted across 10 files per each tag, having 10800 points in each one. For the writing benchmarks, the data for those 10 tags is generated for various time ranges and then stored in both storage engines.
+Для следующих тестов использовалась придуманная синтетическая система. Эта система имеет 10 датчиков, которые производят данные с частотой дискретизации 1 Гц. Для тестов чтения данные для этих 10 тегов были сгенерированы для трех часов измерений. Следовательно, в базе данных SQLite содержатся 108000 записей или точек, или 10800 точек на каждый тег. Библиотека LSM также содержит 108000 записей, разделенных на 10 файлов для каждого тега, по 10800 точек в каждом. Для тестов записи данные для этих 10 тегов генерируются для различных временных диапазонов и затем сохраняются в обоих механизмах хранения.
 
-In order to benchmark both storage engines, a standard Go benchmarking mechanism was used. It runs the target code multiple times until the benchmark function lasts long enough to be measured reliably~\cite{go_benchmark}. It produces the result that is measured in ns/op, nanoseconds per iteration; for the following benchmarks, iteration is a single storage read or storage write call.
+Для тестирования обоих механизмов хранения использовался стандартный механизм тестирования Go. Он запускает целевой код несколько раз, пока тестовая функция не проработает достаточно долго, чтобы время ее выполнения можно было надежно измерить ~\cite {go_benchmark}. Этот механизм дает результат, который измеряется в ns/op, наносекундах на итерацию; для данных тестов итерация - это один вызов чтения или записи в хранилище.
 
-All benchmarks were running on a PC with Intel Core i5-8400 running Ubuntu 18.04, the data files for both storages were stored on an NVMe SSD.
+Все тесты выполнялись на ПК с Intel Core i5-8400 под управлением Ubuntu 18.04, файлы данных для обоих хранилищ хранились на твердотельном накопителе NVMe.
 
-\subsection{Reading from full range of data}
+\subsection{Чтение всего диапазона данных}
 
-This benchmark measures the read time for various time ranges, while the operation is performed across full three hours of measurements. The results of this benchmark are available in Figure~\ref{fig3}. As seen, the GoLSM is about twice as fast as SQLite engine on read requests. It is worth mentioning that the $C_0$ level of LSM tree is not playing a significant role in speeding up the data retrieval, since the time range is picked randomly from across all three hours of measurements while the $C_0$ level only contains the last two minutes of measurements.
+Этот тест измеряет время считывания для различных временных диапазонов, в то время как операция выполняется для полных трех часов измерений. Результаты этого теста представлены на рисунке ~\ref{fig3}. Как видно, GoLSM примерно в два раза быстрее SQLite по запросам на чтение. Стоит отметить, что уровень $C_0$ LSM-дерева не играет существенной роли в ускорении извлечения данных, поскольку временной диапазон выбирается случайным образом из всех трех часов измерений, в то время как уровень $C_0$ содержит только последние две минуты измерений.
 
 \begin{figure}[h!]
 	\centering
 	\input{figures/1-read-comparison}
-	\caption{Reading from full range of data.} \label{fig3}
+	\caption{Чтение всего диапазона данных.} \label{fig3}
 \end{figure}
 
-As seen, the LSM storage is up to 50 times faster than SQLite on a small request range (51251 ns/op for GoLSM and 2517353 ns/op for SQLite on 25s range) and up to twice as fast on a big request range (12106688 ns/op and 24262132 ns/op on 2h15min range). This big difference may be caused by using an in-memory index over each SST file that performed better than indexing within the SQLite. An efficiency increase for the small request range may be caused by the fact that it is more likely for the small requested range to fit within the $C_0$ level of the LSM tree, so the slow retrieval from the SST is not called.
+Как видно, хранилище LSM до 50 раз быстрее, чем SQLite в небольшом диапазоне запросов (51251 нс/операцию для GoLSM и 2517353 нс/операцию для SQLite в диапазоне 25 секунд) и до двух раз быстрее в большом диапазоне запросов (12106688 нс/оп и 24262132 нс/оп в диапазоне 2 ч 15 мин). Эта большая разница может быть вызвана использованием индекса в памяти для каждого файла SST, который работает лучше, чем индексация в SQLite. Повышение эффективности для малого диапазона запросов может быть вызвано тем фактом, что малый запрошенный диапазон с большей вероятностью умещается в пределах уровня $C_0$ дерева LSM, поэтому медленное извлечение из SST не вызывается.
 
-\subsection{Reading from the last three minutes}
+\subsection{Чтение за последние три минуты}
 
-This benchmark measures the read time for various time ranges, while the operation is performed across the latest three minutes of measurements. The results of this benchmark are shown in Figure~\ref{fig4}. Since the $C_0$ level of the LSM tree contains the last two minutes of measurements, it is more likely that the request will fit the $C_0$ level without the need to request data from the $C_1$ level. Therefore, data retrieval is up to twice as fast as retrieving the data from across all three hours of measurements, as seen in Figure~\ref{fig5}. 
+Этот тест измеряет время считывания для различных временных диапазонов, в то время как операция выполняется для последних трех минут измерений. Результаты этого теста показаны на рисунке ~\ref{fig4}. Поскольку уровень $C_0$ LSM-дерева содержит последние две минуты измерений, более вероятно, что запрос будет соответствовать уровню $C_0$ без необходимости запрашивать данные с уровня $C_1$. Таким образом, извлечение данных в два раза быстрее, чем извлечение данных за все три часа измерений, как показано на рисунке ~\ref{fig5}. 
 
 \begin{figure}[!htb]
 	\begin{minipage}{0.48\textwidth}
@@ -32,22 +32,22 @@ This benchmark measures the read time for various time ranges, while the operati
 		\resizebox{\textwidth}{!}{%
 			\input{figures/2.1-read-latest}
 		}
-		\caption{Reading from full range of data.}\label{fig4}
+		\caption{Чтение всего диапазона данных}\label{fig4}
 	\end{minipage}\hfill
 	\begin{minipage}{0.48\textwidth}
 		\centering
 		\resizebox{\textwidth}{!}{%
 			\input{figures/2.2-read-latest-lsmvslsm}
 		}
-		\caption{Difference in GoLSM speed on the latest data.}\label{fig5}
+		\caption{Разница в скорости для разных интервалов.}\label{fig5}
 	\end{minipage}
 \end{figure}
 
-If the data retrieval pattern is retrieving only the latest data, increasing the capacity of $C_0$ can drastically improve reading performance and reduce the reading load on the persistent disk storage.
+Если в системе предполагается чтение только самых последних данных, увеличение емкости $C_0$ может значительно улучшить производительность чтения и снизить нагрузку чтения на постоянное хранилище диска.
 
-\subsection{Writing linear data}
+\subsection{Запись упорядоченных данных}
 
-This benchmark measures the write time for various time ranges. While the data is linear the minimal timestamp of the next data batch to be written is always more than the maximum timestamp of the previously written batch. It means, for each SST within the GoLSM engine the data is only appended to the end of the SST file without the need to redo the sorting of the SST file. The results of this benchmark are available in Figure~\ref{fig6}.
+Этот тест измеряет время записи для различных временных диапазонов. В то время как данные являются упорядоченными, минимальная временная метка следующего записываемого пакета данных всегда больше, чем максимальная временная метка ранее записанного пакета. Это означает, что для каждого SST-файла в GoLSM данные добавляются только в конец SST-файла без необходимости повторять сортировку SST-файла. Результаты этого теста представлены на рисунке ~\ref{fig6}.
 
 \begin{figure}[!htb]
 	\begin{minipage}{0.48\textwidth}
@@ -55,26 +55,26 @@ This benchmark measures the write time for various time ranges. While the data i
 		\resizebox{\textwidth}{!}{%
 			\input{figures/3.1-write-comparison-full}
 		}
-		\label{figure}{(a) Over big range}
+		\label{figure}{(а) Для большого диапазона}
 	\end{minipage}\hfill
 	\begin{minipage}{0.48\textwidth}
 		\centering
 		\resizebox{\textwidth}{!}{%
 			\input{figures/3.2-write-comparison-small}
 		}
-		\label{figure}{(b) Over small range}
+		\label{figure}{(б) Для маленького диапазона}
 	\end{minipage}
 	
-	\caption{Writing linear data.}\label{fig6}
+	\caption{Запись упорядоченных данных.}\label{fig6}
 \end{figure}
 
-In Figure~\ref{fig6}, (a) it is clearly seen that GoLSM writes data twice as fast as SQLite over the big time range that is being written.  However, in Figure~\ref{fig6}, (b) for the small time range the GoLSM is actually slower. The reason for this is that for LSM was measured the time until the data is actually written to the commit log, and not directly to the SST files; and when the amount of entries in the commit log reaches a certain threshold, it has to be transferred to the SST, causing spikes in write time. However, for big time ranges being written this overhead is not important compared to generally slow batch inserts to SQLite. 
+На рисунке ~\ref{fig6}, (а) видно, что GoLSM записывает данные в два раза быстрее, чем SQLite, в течение большого записываемого диапазона времени. Однако на рисунке ~\ref{fig6}, (б) для небольшого временного диапазона GoLSM на самом деле медленнее. Причина этого в том, что для LSM измерялось время до момента фактической записи данных в журнал фиксации, а не непосредственно в файлы SST; и когда количество записей в журнале фиксации достигает определенного порога, оно должно быть передано в SST, что вызывает скачки времени записи. Однако для записываемых больших временных диапазонов эти накладные расходы не важны по сравнению с обычно медленными пакетными вставками в SQLite.
 
-It is worth mentioning that for inserting to SQLite it is necessary to construct the SQL Insert statement that involves converting a double value to string. This operation is extremely slow for big batch inserts (a batch of 10 tags for 30 minutes is 18000 points), and using ORM such as GORM does not improve the situation.
+Стоит отметить, что для вставки в SQLite необходимо составить оператор SQL Insert, который включает преобразование значения типа double в строку. Эта операция выполняется очень медленно для больших пакетов вставок (пакет из 10 тегов за 30 минут составляет 18000 точек), и использование ORM, такого как GORM, не улучшает ситуацию.
 
-\subsection{Writing randomized data}
+\subsection{Запись неупорядоченных данных}
 
-This benchmark measures the write time for various time ranges, while the data is random, there are no guarantees that all of the next batch timestamps are bigger than the timestamps of the previously written batch. So the batches could occur before or after one another in terms of their timestamps. It means each time when the data is transferred from the commit log file to SST files the engine has to resort the whole SST file, slowing down the writing process. The results of this benchmark are available in Figure~\ref{fig7}. The comparison of writing the data to LSM when the data is either linear or randomized is available in Figure~\ref{fig8}.
+Этот тест измеряет время записи для различных временных диапазонов, но, поскольку данные являются неупорядоченными, нет никаких гарантий, что все временные метки следующего пакета больше, чем временные метки ранее записанного пакета. Таким образом, пакеты могут быть получены до или после друг друга с точки зрения их временных меток. Это означает, что каждый раз, когда данные передаются из файла журнала фиксации в файлы SST, библиотека должен пересортировать весь файл SST, замедляя процесс записи. Результаты этого теста представлены на рисунке ~\ref{fig7}. Сравнение записи данных в LSM, когда данные являются упорядоченными или неупорядоченными, доступно на рисунке ~\ref {fig8}.
 
 \begin{figure}[!htb]
 	\begin{minipage}{0.48\textwidth}
@@ -82,15 +82,15 @@ This benchmark measures the write time for various time ranges, while the data i
 		\resizebox{\textwidth}{!}{%
 			\input{figures/3.3-writerandom}
 		}
-		\caption{Writing randomized data.}\label{fig7}
+		\caption{Запись неупорядоченных данных.}\label{fig7}
 	\end{minipage}\hfill
 	\begin{minipage}{0.48\textwidth}
 		\centering
 		\resizebox{\textwidth}{!}{%
 			\input{figures/3.4-writerandom-lsmvslsm}
 		}
-		\caption{Difference in GoLSM speed when writing linear and randomized data.}\label{fig8}
+		\caption{Разница во времени при записи упорядоченных и неупорядоченных данных.}\label{fig8}
 	\end{minipage}
 \end{figure}
 
-As seen in Figure~\ref{fig7}, the overhead of resorting the SST files on every data write is so big that it outperforms the slow batch inserts to SQLite. The comparison of the data writes with this overhead to data writes without the overhead is in Figure~\ref{fig8}. When the timestamps of the data are always linearly increasing, shows that the inserts are almost up to three times slower on large time range writes (747870163 ns/op, or 747 ms, for writing 25 minutes of linear data, and 1942545058 ns/op, or 1942 ms, for writing 25 minutes of randomized data).
+Как видно на рисунке ~\ref {fig7}, накладные расходы на пересортирование файлов SST при каждой записи данных настолько велики, что они занимают больше времени, чем медленные пакетные вставки в SQLite. Сравнение записи данных с этими накладными расходами с записью данных без накладных расходов показано на рисунке ~\ref{fig8}. Когда временные метки данных всегда линейно увеличиваются, это показывает, что вставки почти в три раза медленнее при записи в большом временном диапазоне (747870163 нс/операцию, или 747 мс, для записи 25 минут линейных данных и 1942545058 нс/операцию, или 1942 мс, для записи 25 минут случайных данных).
