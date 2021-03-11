@@ -1,47 +1,72 @@
-% This is samplepaper.tex, a sample chapter demonstrating the
-% LLNCS macro package for Springer Computer Science proceedings;
-% Version 2.20 of 2017/10/04
-%
-\documentclass[runningheads]{llncs}
+%% The first command in your LaTeX source must be the \documentclass command.
+%%
+%% Options:
+%% twocolumn : Two column layout.
+%% hf: enable header and footer.
+\documentclass[
+% twocolumn,
+% hf,
+]{ceurart}
 %
 \usepackage{lipsum}
 \usepackage{pgfplots}
 \usepackage{subcaption}
 \usepackage{caption}
-
 \usepackage{graphicx}
-% Used for displaying a sample figure. If possible, figure files should
-% be included in EPS format.
-%
-% If you use the hyperref package, please uncomment the following line
-% to display URLs in blue roman font according to Springer's eBook style:
-% \renewcommand\UrlFont{\color{blue}\rmfamily}
+%%
+%% One can fix some overfulls
+% \sloppy
 
+%%
+%% end of the preamble, start of the body of the document source.
 \begin{document}
-%
+	
+%%
+%% Rights management information.
+%% CC-BY is default license.
+\copyrightyear{2020}
+\copyrightclause{Copyright for this paper by its authors.
+	Use permitted under Creative Commons License Attribution 4.0
+	International (CC BY 4.0).}
+
+%%
+%% This command is for the conference information
+\conference{The 12th Majorov International Conference on Software Engineering and Computer Systems, 2020, Saint-Petersburg, Russia}
+
 \title{Developing a LSM Tree Time Series Storage Library in Golang}
+
+
+%%
+%% The "author" command and its associated commands are used to define
+%% the authors and their affiliations.
+\author[1]{Nikita Tomilov}[%
+orcid=0000-0001-9325-0356,
+email=programmer174@icloud.com,
+url=https://nikita-tomilov.github.io/,
+]
+\address[1]{ITMO University, Kronverksky Pr. 49, bldg. A, St. Petersburg, 197101, Russia}
+
 %
-%\titlerunning{Abbreviated paper title}
-% If the paper title is too long for the running head, you can set
-% an abbreviated paper title here
-%
-\author{Nikita Tomilov\orcidID{0000-0001-9325-0356}}
-%
-\authorrunning{Nikita Tomilov}
-% First names are abbreviated in the running head.
-% If there are more than two authors, 'et al.' is used.
-%
-\institute{ITMO University, Saint-Petersburg, Russia \\
-\email{mr@itmo.ru}\\
-\url{http://micsecs.org/}}
-%
-\maketitle              % typeset the header of the contribution
+%\maketitle              % typeset the header of the contribution
 %
 \begin{abstract}
-\input{0-abstract}
-
-\keywords{Time Series \and LSM tree \and SST \and Golang.}
+Due to the recent growth in popularity of the Internet of Things solutions, the amount of data being captured, stored, and transferred is also significantly increasing. The concept of edge devices allows buffering of the time-series measurement data to help mitigating the network issues. 
+One of the options to safely buffer the data on such a device within the currently running application is to use some kind of embedded database. However, those can have poor performance, especially on embedded computers. It may lead to bigger response times, which can be harmful for mission-critical applications. That is why in this paper an alternative solution, which involves the LSM tree data structure, was advised.
+The article describes the concept of an LSM tree-based storage for buffering time series data on an edge device within the Golang application. To demonstrate this concept, a GoLSM library was developed. Then, a comparative analysis to a traditional in-application data storage engine SQLite was performed. This research shows that the developed library provides faster data reads and data writes than SQLite as long as the timestamps in the time series data are linearly increasing, which is common for any data logging application.
 \end{abstract}
+
+\begin{keywords}
+	Time Series \sep
+	LSM tree \sep 
+	SST \sep 
+	Golang	
+\end{keywords}
+
+%%
+%% This command processes the author and affiliation and title
+%% information and builds the first part of the formatted document.
+\maketitle
+
 %
 %
 %
